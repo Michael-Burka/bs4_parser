@@ -1,33 +1,31 @@
-import re
 import logging
-from requests_cache import CachedSession
-from typing import List, Tuple, Optional
+import re
 from collections import defaultdict
+from typing import List, Optional, Tuple
 from urllib.parse import urljoin
 
 import requests_cache
 from bs4 import BeautifulSoup
+from requests_cache import CachedSession
 from tqdm import tqdm
 
-from constants import BASE_DIR, MAIN_DOC_URL, PEP_DOC_URL, EXPECTED_STATUS
 from configs import configure_argument_parser, configure_logging
-from outputs import control_output
-from utils import get_response, find_tag
+from constants import BASE_DIR, EXPECTED_STATUS, MAIN_DOC_URL, PEP_DOC_URL
 from exceptions import NoResponse
+from outputs import control_output
+from utils import find_tag, get_response
 
 
 def whats_new(session: CachedSession) -> List[Tuple[str, str, str]]:
     """
-    Получает список нововведений Python с официального сайта.
+    Fetch a list of Python's new features from the official website.
 
     Args:
-        session (CachedSession):
-            Сессия с кешированием для выполнения HTTP-запросов.
+        session (CachedSession): Session object with caching for HTTP requests.
 
     Returns:
-        List[Tuple[str, str, str]]:
-            Список кортежей с информацией о нововведениях
-            (ссылка, заголовок, информация о редакторе и авторе).
+        List[Tuple[str, str, str]]: List of tuples with new feature information
+        (article link, title, editor and author info).
     """
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
     response = get_response(session, whats_new_url)
@@ -62,16 +60,15 @@ def latest_versions(
         session: CachedSession
 ) -> Optional[List[Tuple[str, str, str]]]:
     """
-    Извлекает последние версии Python с официального сайта.
+    Extract the latest Python versions from the official website.
 
     Args:
-        session (CachedSession):
-            Сессия с кешированием для выполнения HTTP-запросов.
+        session (CachedSession): Session object with caching for HTTP requests.
 
     Returns:
-        List[Tuple[str, str, str]]:
-            Список кортежей с информацией о нововведениях
-            (ссылка, заголовок, информация о редакторе и авторе).
+        Optional[List[Tuple[str, str, str]]]: List of tuples with the latest
+        version information (documentation link, version, status), or None
+        if unable to fetch.
     """
     response = get_response(session, MAIN_DOC_URL)
     if response is None:
@@ -106,11 +103,14 @@ def latest_versions(
 
 def download(session: CachedSession) -> None:
     """
-    Загружает последний доступный архив документации Python.
+    Download the latest Python documentation archive in PDF (A4 format).
+
+    Utilizes a session with caching to retrieve the documentation archive,
+    saving it within the 'downloads' directory of BASE_DIR. If this directory
+    does not exist, it will be created.
 
     Args:
-        session (CachedSession):
-            Сессия с кешированием для выполнения HTTP-запросов.
+        session (CachedSession): Session with caching for HTTP requests.
     """
     downloads_url = urljoin(MAIN_DOC_URL, 'download.html')
     response = get_response(session, downloads_url)
@@ -134,17 +134,20 @@ def download(session: CachedSession) -> None:
     logging.info(f'Архив был загружен и сохранён: {archive_path}')
 
 
-def parse_pep_page(session, pep_url):
+def parse_pep_page(session: CachedSession, pep_url: str) -> Optional[str]:
     """
-    Анализирует статусы PEP с официального сайта Python.
+    Extract the status of a specific PEP from its page.
+
+    Makes an HTTP request to a given PEP's URL and parses the page to find
+    the PEP's status. Useful for verifying the status of PEPs listed in the
+    index against their detailed page.
 
     Args:
-        session (CachedSession):
-            Сессия с кешированием для выполнения HTTP-запросов.
+        session (CachedSession): Session for HTTP requests with caching.
+        pep_url (str): URL of the PEP page to parse.
 
     Returns:
-        List[Tuple[str, int]]:
-            Список кортежей со статусами PEP и их количеством.
+        Optional[str]: The status of the PEP if found, None otherwise.
     """
     try:
         response = get_response(session, pep_url)
@@ -155,19 +158,20 @@ def parse_pep_page(session, pep_url):
         return None
 
 
-def pep(session):
+def pep(session: CachedSession) -> Optional[List[Tuple[str, int]]]:
     """
-    Парсит страницу PEP и возвращает статус PEP.
+    Parse PEP (Python Enhancement Proposals) page for status counts.
+
+    Navigates through the PEP index, collecting individual PEP page links,
+    extracting the status, and tallying the status occurrences across all PEPs.
 
     Args:
-        session (CachedSession):
-            Сессия для выполнения HTTP-запросов.
-        pep_url (str):
-            URL страницы PEP для парсинга.
+        session (CachedSession): Session for HTTP requests with caching.
 
     Returns:
-        Optional[str]:
-            Статус PEP или None, если статус не найден или произошла ошибка.
+        Optional[List[Tuple[str, int]]]:
+            List of status labels with their counts,
+            or None if unable to fetch data.
     """
     response = get_response(session, PEP_DOC_URL)
     soup = BeautifulSoup(response.text, features='lxml')
@@ -217,6 +221,7 @@ MODE_TO_FUNCTION = {
 
 
 def main():
+    """Run the parser script based on command line arguments."""
     configure_logging()
     logging.info('Парсер запущен')
 
