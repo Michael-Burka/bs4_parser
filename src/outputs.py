@@ -1,7 +1,6 @@
 import csv
 import datetime as dt
 import logging
-from pathlib import Path
 from typing import List, Tuple, Any, Optional
 
 from prettytable import PrettyTable
