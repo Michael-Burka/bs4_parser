@@ -152,7 +152,9 @@ def parse_pep_page(session: CachedSession, pep_url: str) -> Optional[str]:
     try:
         response = get_response(session, pep_url)
         soup = BeautifulSoup(response.text, features='lxml')
-        status_tag = find_tag(soup, 'abbr', attrs={'title': re.compile(r'\w+')})
+        status_tag = find_tag(
+            soup, 'abbr', attrs={'title': re.compile(r'\w+')}
+        )
         return status_tag.text if status_tag else None
     except NoResponse:
         return None
@@ -184,7 +186,9 @@ def pep(session: CachedSession) -> Optional[List[Tuple[str, int]]]:
     for t in tqdm(tbody):
         abbr_tags = t.find_all('abbr')
         a_tags = [
-            a for a in t.find_all('a', attrs={'class': 'pep reference internal'})
+            a for a in t.find_all(
+                'a', attrs={'class': 'pep reference internal'}
+            )
             if a.text.isdigit()
         ]
         for abbr_tag, a_tag in zip(abbr_tags, a_tags):
