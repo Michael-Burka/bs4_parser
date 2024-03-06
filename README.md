@@ -19,18 +19,52 @@ The Python PEP Parser is a specialized tool designed for parsing and analyzing P
 
 ## Getting Started
 
-### Installation
+### Installation and Usage
 
-1. Clone the repository.
-2. Install dependencies: `pip install -r requirements.txt`
-3. Run the script: `python pep_parser.py [option]`
+1. **Clone the repository**: Find the project on GitHub and clone it to your local machine.
+    ```bash
+    git clone <repository-url>
+    ```
+2. **Set up a virtual environment**: Before installing the dependencies, create a virtual environment to keep them isolated from your global Python environment.
+    ```bash
+    python -m venv venv
+    # On Unix/macOS:
+    source venv/bin/activate
+    # On Windows:
+    .\venv\Scripts\activate
+    ```
+3. **Install dependencies**: Install the required dependencies by running the following command within your virtual environment.
+    ```bash
+    pip install -r requirements.txt
+    ```
+4. **Navigate to the `src` directory**: Change into the `src` directory where the `main.py` script is located.
+    ```bash
+    cd src
+    ```
+5. **Run the script**: Execute the script with the desired option by running:
+    ```bash
+    python main.py [-h] [-c] [-o {pretty,file}] {whats-new,latest-versions,download,pep}
+    ```
 
 ### Command Line Arguments
 
-- `--whats-new`: Fetches the latest features in Python.
-- `--latest-versions`: Analyzes the latest Python versions.
-- `--download`: Downloads the latest Python documentation.
-- `--pep`: Parses PEP pages to analyze their statuses.
+The script supports several command line arguments for various operations:
+
+- **Positional arguments**:
+    - `{whats-new,latest-versions,download,pep}`: Selects the mode of operation for the parser.
+
+- **Optional arguments**:
+    - `-h, --help`: Shows the help message and exits.
+    - `-c, --clear-cache`: Clears the cache to ensure the script fetches the latest data.
+    - `-o {pretty,file}, --output {pretty,file}`: Specifies the output mode. `pretty` for console-friendly display and `file` for saving the output to a file.
+
+### Example Usage
+
+To fetch the latest features in Python and display them in a console-friendly format:
+```bash
+python main.py whats-new --output pretty
+
+```
 
 ## Detailed Functionality
 
