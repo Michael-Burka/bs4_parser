@@ -122,7 +122,9 @@ def download(session: CachedSession) -> None:
 
     main_tag = find_tag(soup, 'div', {'role': 'main'})
     table_tag = find_tag(main_tag, 'table', {'class': 'docutils'})
-    pdf_a4_tag = find_tag(table_tag, 'a', {'href': re.compile(r'.+pdf-a4\.zip$')})
+    pdf_a4_tag = find_tag(
+        table_tag, 'a', {'href': re.compile(r'.+pdf-a4\.zip$')}
+    )
     pdf_a4_link = pdf_a4_tag['href']
     archive_url = urljoin(downloads_url, pdf_a4_link)
     filename = archive_url.split('/')[-1]
@@ -209,8 +211,8 @@ def pep(session: CachedSession) -> Optional[List[Tuple[str, int]]]:
             pep_url = urljoin(PEP_DOC_URL, link_tag['href'])
 
             page_status = parse_pep_page(session, pep_url)
-            if page_status and page_status not in EXPECTED_STATUS.get(
-                    table_status, []
+            if page_status and page_status not in (
+                    EXPECTED_STATUS.get(table_status, [])
             ):
                 mismatched_status_logs.append(
                     f"Mismatched statuses: {pep_url} "
