@@ -29,6 +29,8 @@ def whats_new(session: CachedSession) -> List[Tuple[str, str, str]]:
     """
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
     response = get_response(session, whats_new_url)
+    if response is None:
+        return
     soup = BeautifulSoup(response.text, features='lxml')
 
     main_div = find_tag(soup, 'section', attrs={'id': 'what-s-new-in-python'})
@@ -40,7 +42,7 @@ def whats_new(session: CachedSession) -> List[Tuple[str, str, str]]:
     results = [('Ссылка на статью', 'Заголовок', 'Редактор, Автор')]
 
     for section in tqdm(sections_by_python):
-        version_a_tag = section.find('a')
+        version_a_tag = find_tag(section, 'a')
         version_link = urljoin(whats_new_url, version_a_tag['href'])
         response = get_response(session, version_link)
         if response is None:
@@ -75,7 +77,7 @@ def latest_versions(
         return
     soup = BeautifulSoup(response.text, features='lxml')
 
-    sidebar = soup.find('div', {'class': 'sphinxsidebarwrapper'})
+    sidebar = find_tag(soup, 'div', {'class': 'sphinxsidebarwrapper'})
     ul_tags = sidebar.find_all('ul')
 
     for ul in ul_tags:
@@ -114,11 +116,13 @@ def download(session: CachedSession) -> None:
     """
     downloads_url = urljoin(MAIN_DOC_URL, 'download.html')
     response = get_response(session, downloads_url)
+    if response is None:
+        return
     soup = BeautifulSoup(response.text, features='lxml')
 
-    main_tag = soup.find('div', {'role': 'main'})
-    table_tag = main_tag.find('table', {'class': 'docutils'})
-    pdf_a4_tag = table_tag.find('a', {'href': re.compile(r'.+pdf-a4\.zip$')})
+    main_tag = find_tag(soup, 'div', {'role': 'main'})
+    table_tag = find_tag(main_tag, 'table', {'class': 'docutils'})
+    pdf_a4_tag = find_tag(table_tag, 'a', {'href': re.compile(r'.+pdf-a4\.zip$')})
     pdf_a4_link = pdf_a4_tag['href']
     archive_url = urljoin(downloads_url, pdf_a4_link)
     filename = archive_url.split('/')[-1]
@@ -128,6 +132,8 @@ def download(session: CachedSession) -> None:
     archive_path = downloads_dir / filename
 
     response = session.get(archive_url)
+    if response is None:
+        return
 
     with open(archive_path, 'wb') as file:
         file.write(response.content)
@@ -151,6 +157,8 @@ def parse_pep_page(session: CachedSession, pep_url: str) -> Optional[str]:
     """
     try:
         response = get_response(session, pep_url)
+        if response is None:
+            return
         soup = BeautifulSoup(response.text, features='lxml')
         status_tag = find_tag(
             soup, 'abbr', attrs={'title': re.compile(r'\w+')}
@@ -176,6 +184,8 @@ def pep(session: CachedSession) -> Optional[List[Tuple[str, int]]]:
             or None if unable to fetch data.
     """
     response = get_response(session, PEP_DOC_URL)
+    if response is None:
+        return
     soup = BeautifulSoup(response.text, features='lxml')
     section = find_tag(soup, 'section', attrs={'id': 'index-by-category'})
     tbody = section.find_all('tbody')
@@ -183,31 +193,35 @@ def pep(session: CachedSession) -> Optional[List[Tuple[str, int]]]:
     results = [('Status', 'Count')]
     status_counter = defaultdict(int)
 
-    for t in tqdm(tbody):
-        abbr_tags = t.find_all('abbr')
-        a_tags = [
-            a for a in t.find_all(
+    for table_body in tqdm(tbody):
+        abbr_tags = table_body.find_all('abbr')
+        link_tags = [
+            link for link in table_body.find_all(
                 'a', attrs={'class': 'pep reference internal'}
             )
-            if a.text.isdigit()
+            if link.text.isdigit()
         ]
-        for abbr_tag, a_tag in zip(abbr_tags, a_tags):
+
+        mismatched_status_logs = []
+
+        for abbr_tag, link_tag in zip(abbr_tags, link_tags):
             table_status = abbr_tag.text[1:]
-            pep_url = urljoin(PEP_DOC_URL, a_tag['href'])
+            pep_url = urljoin(PEP_DOC_URL, link_tag['href'])
 
             page_status = parse_pep_page(session, pep_url)
-
             if page_status and page_status not in EXPECTED_STATUS.get(
                     table_status, []
             ):
-                logging.info(
-                    f"Несовпадающие статусы: {pep_url} "
-                    f"Статус в карточке: {page_status} "
-                    f"Ожидаемые статусы: "
-                    f"{EXPECTED_STATUS.get(table_status)}"
+                mismatched_status_logs.append(
+                    f"Mismatched statuses: {pep_url} "
+                    f"Status in page: {page_status} "
+                    f"Expected statuses: {EXPECTED_STATUS.get(table_status)}"
                 )
             if page_status:
                 status_counter[page_status] += 1
+
+        if mismatched_status_logs:
+            logging.info('\n'.join(mismatched_status_logs))
 
     count_pep = sum(status_counter.values())
     results.extend(status_counter.items())
