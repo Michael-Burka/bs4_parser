@@ -7,14 +7,3 @@ class ParserFindTagException(Exception):
     """
 
     pass
-
-
-class NoResponse(Exception):
-    """
-    Exception for when no response is received by the parser.
-
-    Signifies network or server issues preventing data retrieval. Handling
-    might include request retries, incident logging, or user notifications.
-    """
-
-    pass

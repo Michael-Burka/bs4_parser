@@ -11,7 +11,6 @@ from tqdm import tqdm
 
 from configs import configure_argument_parser, configure_logging
 from constants import BASE_DIR, EXPECTED_STATUS, MAIN_DOC_URL, PEP_DOC_URL
-from exceptions import NoResponse
 from outputs import control_output
 from utils import find_tag, get_response
 
@@ -24,7 +23,7 @@ def whats_new(session: CachedSession) -> List[Tuple[str, str, str]]:
         session (CachedSession): Session object with caching for HTTP requests.
 
     Returns:
-        List[Tuple[str, str, str]]: List of tuples with new feature information
+        List of tuples with new feature information
         (article link, title, editor and author info).
     """
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
@@ -68,9 +67,8 @@ def latest_versions(
         session (CachedSession): Session object with caching for HTTP requests.
 
     Returns:
-        Optional[List[Tuple[str, str, str]]]: List of tuples with the latest
-        version information (documentation link, version, status), or None
-        if unable to fetch.
+        List of tuples with the latest version information
+        (documentation link, version, status), or None if unable to fetch.
     """
     response = get_response(session, MAIN_DOC_URL)
     if response is None:
@@ -105,14 +103,20 @@ def latest_versions(
 
 def download(session: CachedSession) -> None:
     """
-    Download the latest Python documentation archive in PDF (A4 format).
+    Downloads the latest Python documentation in PDF (A4 format).
 
-    Utilizes a session with caching to retrieve the documentation archive,
-    saving it within the 'downloads' directory of BASE_DIR. If this directory
-    does not exist, it will be created.
+    This function retrieves the PDF archive of Python's documentation using a
+    session with caching enabled. It saves the archive within the 'downloads'
+    directory of BASE_DIR. If this directory does not exist, it will be
+    automatically created. Logs the success of the download operation.
 
     Args:
-        session (CachedSession): Session with caching for HTTP requests.
+        session (CachedSession): A session object for making HTTP requests
+        with caching.
+
+    Returns:
+        None. The function writes the PDF archive to the filesystem and logs
+        the path where the archive is saved but does not return any value.
     """
     downloads_url = urljoin(MAIN_DOC_URL, 'download.html')
     response = get_response(session, downloads_url)
@@ -142,92 +146,67 @@ def download(session: CachedSession) -> None:
     logging.info(f'Архив был загружен и сохранён: {archive_path}')
 
 
-def parse_pep_page(session: CachedSession, pep_url: str) -> Optional[str]:
-    """
-    Extract the status of a specific PEP from its page.
-
-    Makes an HTTP request to a given PEP's URL and parses the page to find
-    the PEP's status. Useful for verifying the status of PEPs listed in the
-    index against their detailed page.
-
-    Args:
-        session (CachedSession): Session for HTTP requests with caching.
-        pep_url (str): URL of the PEP page to parse.
-
-    Returns:
-        Optional[str]: The status of the PEP if found, None otherwise.
-    """
-    try:
-        response = get_response(session, pep_url)
-        if response is None:
-            return
-        soup = BeautifulSoup(response.text, features='lxml')
-        status_tag = find_tag(
-            soup, 'abbr', attrs={'title': re.compile(r'\w+')}
-        )
-        return status_tag.text if status_tag else None
-    except NoResponse:
-        return None
-
-
 def pep(session: CachedSession) -> Optional[List[Tuple[str, int]]]:
     """
-    Parse PEP (Python Enhancement Proposals) page for status counts.
+    Pars the PEP index for status counts and logs mismatches.
 
-    Navigates through the PEP index, collecting individual PEP page links,
-    extracting the status, and tallying the status occurrences across all PEPs.
+    Iterates over PEPs, extracts and compares statuses from the index and
+    PEP pages. Tallies status occurrences and logs discrepancies. Returns
+    status counts and total processed PEPs or None if unreachable.
 
     Args:
-        session (CachedSession): Session for HTTP requests with caching.
+        session (CachedSession): Session for cached HTTP requests.
 
     Returns:
-        Optional[List[Tuple[str, int]]]:
-            List of status labels with their counts,
-            or None if unable to fetch data.
+        List of tuples with status counts and total PEPs or None.
     """
     response = get_response(session, PEP_DOC_URL)
     if response is None:
         return
-    soup = BeautifulSoup(response.text, features='lxml')
-    section = find_tag(soup, 'section', attrs={'id': 'index-by-category'})
-    tbody = section.find_all('tbody')
+
+    soup = BeautifulSoup(response.text, 'lxml')
+    index_section = find_tag(soup, 'section', attrs={'id': 'numerical-index'})
+    peps_table_body = find_tag(index_section, 'tbody')
+    pep_rows = peps_table_body.find_all('tr')
 
     results = [('Status', 'Count')]
     status_counter = defaultdict(int)
+    mismatch_log = []
 
-    for table_body in tqdm(tbody):
-        abbr_tags = table_body.find_all('abbr')
-        link_tags = [
-            link for link in table_body.find_all(
-                'a', attrs={'class': 'pep reference internal'}
+    for pep_row in tqdm(pep_rows, desc="Processing PEPs"):
+        status_abbr = find_tag(pep_row, 'abbr')
+        listed_status = status_abbr.text[1:]
+        pep_link_tag = find_tag(pep_row, 'a')
+        pep_url = urljoin(PEP_DOC_URL, pep_link_tag['href'])
+
+        pep_response = get_response(session, pep_url)
+        if pep_response is None:
+            continue
+
+        pep_page_soup = BeautifulSoup(pep_response.text, 'lxml')
+        status_section = find_tag(
+            pep_page_soup, 'dl', attrs={'class': 'rfc2822 field-list simple'}
+        )
+        actual_status = (
+            status_section.find(string='Status').find_next('dd').text
+        )
+
+        if actual_status not in EXPECTED_STATUS.get(listed_status, []):
+            error_message = (
+                f"Mismatched statuses: {pep_url}"
+                f"Status on page: {actual_status}"
+                f"Expected statuses: {EXPECTED_STATUS.get(listed_status)}"
             )
-            if link.text.isdigit()
-        ]
+            mismatch_log.append(error_message)
 
-        mismatched_status_logs = []
+        status_counter[actual_status] += 1
 
-        for abbr_tag, link_tag in zip(abbr_tags, link_tags):
-            table_status = abbr_tag.text[1:]
-            pep_url = urljoin(PEP_DOC_URL, link_tag['href'])
+    if mismatch_log:
+        logging.info('\n'.join(mismatch_log))
 
-            page_status = parse_pep_page(session, pep_url)
-            if page_status and page_status not in (
-                    EXPECTED_STATUS.get(table_status, [])
-            ):
-                mismatched_status_logs.append(
-                    f"Mismatched statuses: {pep_url} "
-                    f"Status in page: {page_status} "
-                    f"Expected statuses: {EXPECTED_STATUS.get(table_status)}"
-                )
-            if page_status:
-                status_counter[page_status] += 1
-
-        if mismatched_status_logs:
-            logging.info('\n'.join(mismatched_status_logs))
-
-    count_pep = sum(status_counter.values())
+    count_peps = sum(status_counter.values())
     results.extend(status_counter.items())
-    results.append(('Total', count_pep))
+    results.append(('Total', count_peps))
 
     return results
 
