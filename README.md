@@ -1,8 +1,8 @@
-# Python PEP Parser: An Overview
+# Python Doc & PEP Parser
 
 ## Overview
 
-The Python PEP Parser is a specialized tool designed for parsing and analyzing Python Enhancement Proposals (PEPs) directly from the official Python website. It utilizes Python libraries such as BeautifulSoup for HTML parsing and requests_cache for efficient HTTP requests handling. This tool provides functionalities like fetching the latest Python versions, new features, downloading Python documentation, and analyzing PEP statuses to ensure they match expected outcomes.
+The Python Doc & PEP Parser is a specialized tool designed for parsing and analyzing Python Enhancement Proposals (PEPs) directly from the official Python website. It utilizes Python libraries such as BeautifulSoup for HTML parsing and requests_cache for efficient HTTP requests handling. This tool provides functionalities like fetching the latest Python versions, new features, downloading Python documentation, and analyzing PEP statuses to ensure they match expected outcomes.
 
 ### Key Features
 
