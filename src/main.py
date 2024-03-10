@@ -38,7 +38,7 @@ def whats_new(session: CachedSession) -> List[Tuple[str, str, str]]:
         'li', attrs={'class': 'toctree-l1'}
     )
 
-    results = [('Ссылка на статью', 'Заголовок', 'Редактор, Автор')]
+    results = [('Article link', 'Title', 'Editor, Author')]
 
     for section in tqdm(sections_by_python):
         version_a_tag = find_tag(section, 'a')
@@ -83,9 +83,9 @@ def latest_versions(
             a_tags = ul.find_all('a')
             break
     else:
-        raise Exception('Ничего не нашлось')
+        raise Exception('Nothing was found')
 
-    results = [('Ссылка на документацию', 'Версия', 'Статус')]
+    results = [('Documentation link', 'Version', 'Status')]
     pattern = r'Python (?P<version>\d\.\d+) \((?P<status>.*)\)'
     for a_tag in a_tags:
         link = a_tag['href']
@@ -222,11 +222,11 @@ MODE_TO_FUNCTION = {
 def main():
     """Run the parser script based on command line arguments."""
     configure_logging()
-    logging.info('Парсер запущен')
+    logging.info('Parser started')
 
     arg_parser = configure_argument_parser(MODE_TO_FUNCTION.keys())
     args = arg_parser.parse_args()
-    logging.info(f'Аргументы командной строки {args}')
+    logging.info(f'Command line arguments {args}')
 
     session = requests_cache.CachedSession()
     if args.clear_cache:
@@ -237,7 +237,8 @@ def main():
 
     if results is not None:
         control_output(results, args)
-    logging.info('Парсер завершил работу')
+    logging.info('Parser finished successfully')
+
 
 
 if __name__ == '__main__':

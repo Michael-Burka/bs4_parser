@@ -24,7 +24,7 @@ def get_response(session: Session, url: str) -> Optional[Response]:
         return response
     except RequestException:
         logging.exception(
-            f'Возникла ошибка при загрузке страницы {url}',
+            f'An error occurred while loading the page {url}',
             stack_info=True
         )
         return None
@@ -49,7 +49,7 @@ def find_tag(
     """
     searched_tag = soup.find(tag, attrs=(attrs or {}))
     if searched_tag is None:
-        error_msg = f'Не найден тег {tag} {attrs}'
+        error_msg = f'Tag {tag} {attrs} not found'
         logging.error(error_msg, stack_info=True)
         raise ParserFindTagException(error_msg)
     return searched_tag

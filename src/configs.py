@@ -23,30 +23,30 @@ def configure_argument_parser(
     Returns:
         argparse.ArgumentParser: Configured parser object.
     """
-    parser = argparse.ArgumentParser(description='Парсер документации Python')
+    parser = argparse.ArgumentParser(description='Python documentation parser')
     parser.add_argument(
         'mode',
         choices=available_modes,
-        help='Режимы работы парсера'
+        help='Parser operation modes'
     )
     parser.add_argument(
         '-c',
         '--clear-cache',
         action='store_true',
-        help='Очистка кеша'
+        help='Clear cache'
     )
     parser.add_argument(
         '-o',
         '--output',
         choices=('pretty', 'file'),
-        help='Дополнительные способы вывода данных'
+        help='Additional output methods'
     )
     return parser
 
 
 def configure_logging() -> None:
     """
-    Sets up logging with file rotation,
+    Set up logging with file rotation,
     storing logs in a directory within BASE_DIR.
     Creates a rotating file handler for logging, managing file size and count.
     """
@@ -61,5 +61,5 @@ def configure_logging() -> None:
         datefmt=DT_FORMAT,
         format=LOG_FORMAT,
         level=logging.INFO,
-        handlers=(rotating_handler, logging.StreamHandler())
+        handlers=[rotating_handler, logging.StreamHandler()]
     )

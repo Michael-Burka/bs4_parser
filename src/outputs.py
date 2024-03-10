@@ -73,4 +73,4 @@ def file_output(results: List[Tuple[Any, ...]],
     with open(file_path, 'w', encoding='utf-8') as f:
         writer = csv.writer(f, dialect='unix')
         writer.writerows(results)
-    logging.info(f'Файл с результатами был сохранён: {file_path}')
+    logging.info(f'Results file was saved: {file_path}')
